@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#121212" />
+  <title>Mini Spotify — Music for everyone</title>
+  <style>
+    :root {
+      --bg: #000;
+      --panel: #121212;
+      --panel-soft: #181818;
+      --panel-hover: #242424;
+      --text: #fff;
+      --muted: #a7a7a7;
+      --green: #1DB954;
+      --player-height: 94px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text);
+      background: var(--bg); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding-bottom: calc(var(--player-height) + 22px);
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .app { display: grid; grid-template-columns: 238px minmax(0, 1fr); gap: 8px; min-height: calc(100vh - var(--player-height)); padding: 8px; }
+    .sidebar { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+    .side-card, .main { background: var(--panel); border-radius: 10px; }
+    .side-card { padding: 22px 18px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 800; letter-spacing: -.7px; }
+    .brand-mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: #071b0e; font-weight: 900; }
+    .nav { display: grid; gap: 18px; margin-top: 26px; }
+    .nav a { color: var(--muted); text-decoration: none; font-weight: 700; display: flex; gap: 14px; align-items: center; }
+    .nav a.active, .nav a:hover { color: #fff; }
+    .nav-icon { width: 22px; text-align: center; font-size: 19px; }
+    .library-head { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-weight: 700; }
+    .library-head button { border: 0; color: var(--muted); background: none; font-size: 22px; }
+    .library-note { margin-top: 18px; padding: 16px; border-radius: 8px; background: #1e1e1e; }
+    .library-note strong { display: block; margin-bottom: 7px; font-size: 14px; }
+    .library-note p { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0 0 14px; }
+    .pill { border: 0; border-radius: 99px; padding: 8px 14px; color: #000; background: #fff; font-weight: 800; font-size: 12px; }
+    .main { overflow: hidden; }
+    .topbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 16px 24px; background: rgba(18,18,18,.94); backdrop-filter: blur(12px); }
+    .history { display: flex; gap: 8px; }
+    .circle-btn { width: 34px; height: 34px; border: 0; border-radius: 50%; color: #fff; background: #050505; font-size: 20px; }
+    .search-wrap { flex: 1; max-width: 440px; position: relative; }
+    .search-wrap span { position: absolute; left: 14px; top: 10px; color: #111; font-size: 18px; }
+    #search { width: 100%; border: 0; outline: none; border-radius: 99px; padding: 12px 16px 12px 42px; color: #111; background: #fff; }
+    .profile { margin-left: auto; background: #050505; border-radius: 99px; padding: 5px 12px 5px 5px; display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 800; }
+    .avatar { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #535353; }
+    .content { padding: 18px 24px 32px; }
+    .hero { display: flex; align-items: end; gap: 22px; padding: 25px; min-height: 210px; border-radius: 9px; background: linear-gradient(110deg, #254d38, #162b24 55%, #121212); }
+    .hero-art { width: 150px; height: 150px; flex: 0 0 150px; border-radius: 7px; object-fit: cover; box-shadow: 0 10px 30px #0008; }
+    .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; }
+    h1 { margin: 8px 0; font-size: clamp(30px, 4vw, 48px); letter-spacing: -1.8px; }
+    .hero p { margin: 0; color: #ddd; font-size: 13px; }
+    .hero-actions { display: flex; gap: 12px; align-items: center; margin-top: 18px; }
+    .play-main { border: 0; border-radius: 99px; background: var(--green); color: #06190c; font-weight: 900; padding: 13px 25px; }
+    .play-main:hover { transform: scale(1.04); background: #25d760; }
+    .text-btn { color: #ddd; border: 1px solid #aaa; background: transparent; border-radius: 99px; padding: 11px 20px; font-weight: 800; }
+    .section-head { display: flex; justify-content: space-between; align-items: end; margin: 30px 0 14px; }
+    .section-head h2 { margin: 0; font-size: 22px; letter-spacing: -.5px; }
+    .section-head small { color: var(--muted); }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 16px; }
+    .card { background: var(--panel-soft); border-radius: 8px; padding: 14px; min-width: 0; cursor: pointer; transition: background .18s, transform .18s; position: relative; }
+    .card:hover { background: var(--panel-hover); transform: translateY(-2px); }
+    .cover-wrap { position: relative; }
+    .cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 5px; display: block; background: #292929; }
+    .card-play { position: absolute; right: 8px; bottom: 8px; width: 44px; height: 44px; border: 0; border-radius: 50%; color: #06210e; background: var(--green); font-size: 17px; opacity: 0; transform: translateY(7px); transition: .18s; box-shadow: 0 5px 14px #0007; }
+    .card:hover .card-play { opacity: 1; transform: translateY(0); }
+    .card h3 { font-size: 14px; margin: 13px 0 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card p { color: var(--muted); font-size: 12px; line-height: 1.45; margin: 0; }
+    .track-list { margin-top: 10px; }
+    .track-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(90px, .7fr) 50px; gap: 14px; align-items: center; padding: 9px 12px; border-radius: 5px; cursor: pointer; }
+    .track-row:hover, .track-row.playing { background: #ffffff12; }
+    .track-num { color: var(--muted); text-align: center; font-size: 13px; }
+    .track-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .track-title img { width: 42px; height: 42px; border-radius: 4px; object-fit: cover; }
+    .track-title strong, .track-title small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .track-title strong { font-size: 13px; font-weight: 600; }
+    .track-title small, .album-name, .track-duration { color: var(--muted); font-size: 12px; }
+    .track-duration { text-align: right; }
+    .empty { padding: 28px 10px; color: var(--muted); text-align: center; }
+    .player { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; height: var(--player-height); padding: 12px 22px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(260px, 1.4fr) minmax(150px, 1fr); gap: 20px; align-items: center; background: #181818; border-top: 1px solid #292929; }
+    .now-playing { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .now-playing img { width: 56px; height: 56px; object-fit: cover; border-radius: 4px; background: #333; }
+    .now-meta { min-width: 0; }
+    .now-meta strong, .now-meta small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .now-meta strong { font-size: 13px; }
+    .now-meta small { color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .heart { color: var(--green); border: 0; background: transparent; font-size: 18px; }
+    .controls { display: flex; flex-direction: column; gap: 7px; align-items: center; }
+    .control-buttons { display: flex; gap: 22px; align-items: center; }
+    .control-buttons button { border: 0; background: transparent; color: #ddd; font-size: 17px; }
+    .control-buttons button:hover { color: #fff; }
+    .control-buttons .main-control { width: 34px; height: 34px; border-radius: 50%; color: #111; background: #fff; font-size: 15px; }
+    .control-buttons .main-control:hover { transform: scale(1.06); }
+    .timeline { width: 100%; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; }
+    input[type="range"] { accent-color: var(--green); cursor: pointer; }
+    #progress { flex: 1; height: 4px; }
+    .volume-area { display: flex; justify-content: flex-end; align-items: center; gap: 10px; color: var(--muted); }
+    #volume { width: min(110px, 60%); }
+    .audio-note { color: var(--muted); font-size: 11px; margin-top: 16px; line-height: 1.5; }
+    @media (max-width: 760px) {
+      :root { --player-height: 112px; }
+      .app { grid-template-columns: 1fr; padding: 5px; }
+      .sidebar { display: none; }
+      .topbar { padding: 13px 14px; }
+      .content { padding: 12px 14px 25px; }
+      .hero { min-height: 150px; padding: 16px; gap: 14px; }
+      .hero-art { width: 100px; height: 100px; flex-basis: 100px; }
+      .hero p { font-size: 11px; }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .card { padding: 10px; }
+      .track-row { grid-template-columns: 22px minmax(0, 1fr) 45px; gap: 8px; }
+      .album-name { display: none; }
+      .player { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 9px 12px; }
+      .now-playing img { width: 44px; height: 44px; }
+      .controls { grid-column: 1 / -1; grid-row: 2; }
+      .now-playing { grid-column: 1; grid-row: 1; }
+      .volume-area { grid-column: 2; grid-row: 1; }
+      .volume-area #volume { width: 65px; }
+      .control-buttons { gap: 24px; }
+      .timeline { max-width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <section class="side-card">
+        <div class="brand"><span class="brand-mark">♪</span> mini<span style="color:var(--green)">spotify by Raju singh </span></div>
+        <nav class="nav">
+          <a class="active" href="#"><span class="nav-icon">⌂</span> Home</a>
+          <a href="#tracks"><span class="nav-icon">⌕</span> Browse songs</a>
+        </nav>
+      </section>
+      <section class="side-card" style="flex:1">
+        <div class="library-head"><span>▤ Your Library</span><button aria-label="Add to library">＋</button></div>
+        <div class="library-note">
+          <strong>Build your soundtrack</strong>
+          <p>Pick a track, press play, and enjoy your music. No account or subscription needed.</p>
+          <button class="pill" onclick="document.querySelector('#tracks').scrollIntoView({behavior:'smooth'})">Explore tracks</button>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="history"><button class="circle-btn" aria-label="Back" onclick="history.back()">‹</button><button class="circle-btn" aria-label="Forward" onclick="history.forward()">›</button></div>
+        <label class="search-wrap"><span>⌕</span><input id="search" type="search" placeholder="What do you want to play?" autocomplete="off" aria-label="Search songs or artists"></label>
+        <div class="profile"><span class="avatar">♪</span><span>Listener</span></div>
+      </header>
+
+      <div class="content">
+        <section class="hero">
+          <img class="hero-art" src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=500&auto=format&fit=crop&q=80" alt="Music studio" />
+          <div>
+            <div class="eyebrow">Your music, your way</div>
+            <h1>Good evening</h1>
+            <p>A little bit of everything. Press play and make the moment yours.</p>
+            <div class="hero-actions"><button class="play-main" id="heroPlay">▶ Play mix</button><button class="text-btn" id="shuffleBtn">⤨ Shuffle</button></div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head"><h2>Made for your mood</h2><small>Hand-picked demo mix</small></div>
+          <div class="cards" id="cards"></div>
+        </section>
+
+        <section id="tracks">
+          <div class="section-head"><h2>All tracks</h2><small id="trackCount">15 tracks</small></div>
+          <div class="track-list" id="trackList"></div>
+          <p class="audio-note">Audio note: this starter app uses public SoundHelix demo streams so playback works without a music-service account. They are demo recordings, not the commercial hit recordings named in Spotify. Replace the audio URLs with tracks you own or are licensed to stream before publishing.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <footer class="player" aria-label="Music player">
+    <div class="now-playing">
+      <img id="nowArt" src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=120&auto=format&fit=crop&q=80" alt="Current track artwork" />
+      <div class="now-meta"><strong id="nowTitle">Choose a track</strong><small id="nowArtist">Your next favourite is waiting</small></div>
+      <button class="heart" id="likeBtn" title="Like track" aria-label="Like track">♡</button>
+    </div>
+    <div class="controls">
+      <div class="control-buttons">
+        <button id="prevBtn" aria-label="Previous track" title="Previous">|◀</button>
+        <button class="main-control" id="playBtn" aria-label="Play" title="Play">▶</button>
+        <button id="nextBtn" aria-label="Next track" title="Next">▶|</button>
+      </div>
+      <div class="timeline"><span id="currentTime">0:00</span><input id="progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="Track progress"><span id="duration">0:00</span></div>
+    </div>
+    <div class="volume-area"><span aria-hidden="true">🔊</span><input id="volume" type="range" min="0" max="1" value="0.75" step="0.01" aria-label="Volume"></div>
+  </footer>
+
+  <audio id="audio" preload="metadata"></audio>
+
+  <script>
+    // SoundHelix publishes numbered MP3 demo files. Track labels below are
+    // illustrative playlist names; they are not claims about commercial songs.
+    const tracks = [
+      { title: "Neon Afterglow", artist: "SoundHelix Demo", mood: "Upbeat", album: "Night Drive", art: "photo-1519608487953-e999c86e7455", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+      { title: "Golden Hour", artist: "SoundHelix Demo", mood: "Chill", album: "Soft Focus", art: "photo-1470252649378-9c29740c9fa8", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+      { title: "City Lights", artist: "SoundHelix Demo", mood: "Electronic", album: "After Hours", art: "photo-1519608487953-e999c86e7455", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+      { title: "Cloud Nine", artist: "SoundHelix Demo", mood: "Upbeat", album: "Blue Skies", art: "photo-1507525428034-b723cf961d3e", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+      { title: "Quiet Corners", artist: "SoundHelix Demo", mood: "Lo-fi", album: "Study Session", art: "photo-1470770841072-f978cf4d019e", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" },
+      { title: "Midnight Drive", artist: "SoundHelix Demo", mood: "Electronic", album: "Night Drive", art: "photo-1493238792000-8113da705763", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
+      { title: "Slow Motion", artist: "SoundHelix Demo", mood: "Lo-fi", album: "Soft Focus", art: "photo-1519682337058-a94d519337bc", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3" },
+      { title: "Electric Bloom", artist: "SoundHelix Demo", mood: "Upbeat", album: "Color Rush", art: "photo-1492684223066-81342ee5ff30", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" },
+      { title: "Rainy Window", artist: "SoundHelix Demo", mood: "Lo-fi", album: "Study Session", art: "photo-1518837695005-2083093ee35b", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3" },
+      { title: "Runaway Weekend", artist: "SoundHelix Demo", mood: "Indie", album: "Open Road", art: "photo-1500530855697-b586d89ba3ee", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" },
+      { title: "Starlight", artist: "SoundHelix Demo", mood: "Chill", album: "Blue Skies", art: "photo-1462331940025-496dfbfc7564", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3" },
+      { title: "Fresh Start", artist: "SoundHelix Demo", mood: "Upbeat", album: "Color Rush", art: "photo-1490750967868-88aa4486c946", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3" },
+      { title: "Paper Planes", artist: "SoundHelix Demo", mood: "Indie", album: "Open Road", art: "photo-1473448912268-2022ce9509d8", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3" },
+      { title: "Weightless", artist: "SoundHelix Demo", mood: "Ambient", album: "Soft Focus", art: "photo-1500534623283-312aade485b7", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3" },
+      { title: "After the Rain", artist: "SoundHelix Demo", mood: "Chill", album: "Study Session", art: "photo-1441974231531-c6227db76b6e", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" }
+    ];
+
+    const audio = document.getElementById("audio");
+    const $ = id => document.getElementById(id);
+    let currentIndex = -1;
+    let isSeeking = false;
+    let liked = false;
+
+    const artUrl = id => `https://images.unsplash.com/${id}?w=500&auto=format&fit=crop&q=80`;
+    const formatTime = seconds => {
+      if (!Number.isFinite(seconds)) return "0:00";
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60).toString().padStart(2, "0");
+      return `${m}:${s}`;
+    };
+
+    function renderCards(list = tracks.slice(0, 6)) {
+      $("cards").innerHTML = list.slice(0, 6).map(track => {
+        const index = tracks.indexOf(track);
+        return `<article class="card" data-index="${index}" tabindex="0" role="button" aria-label="Play ${track.title}">
+          <div class="cover-wrap"><img class="cover" src="${artUrl(track.art)}" alt="" loading="lazy"><button class="card-play" aria-label="Play ${track.title}">▶</button></div>
+          <h3>${track.title}</h3><p>${track.mood} • ${track.artist}</p>
+        </article>`;
+      }).join("");
+    }
+
+    function renderList(list = tracks) {
+      $("trackCount").textContent = `${list.length} ${list.length === 1 ? "track" : "tracks"}`;
+      if (!list.length) {
+        $("trackList").innerHTML = '<div class="empty">No matches. Try another title or artist.</div>';
+        return;
+      }
+      $("trackList").innerHTML = list.map((track, i) => {
+        const index = tracks.indexOf(track);
+        return `<div class="track-row ${index === currentIndex ? "playing" : ""}" data-index="${index}" tabindex="0" role="button" aria-label="Play ${track.title}">
+          <span class="track-num">${index === currentIndex && !audio.paused ? "♫" : i + 1}</span>
+          <div class="track-title"><img src="${artUrl(track.art)}" alt="" loading="lazy"><div><strong>${track.title}</strong><small>${track.artist}</small></div></div>
+          <span class="album-name">${track.album}</span><span class="track-duration">${index === currentIndex && Number.isFinite(audio.duration) ? formatTime(audio.duration) : "♪"}</span>
+        </div>`;
+      }).join("");
+    }
+
+    function updatePlayButtons() {
+      $("playBtn").textContent = audio.paused ? "▶" : "Ⅱ";
+      $("playBtn").setAttribute("aria-label", audio.paused ? "Play" : "Pause");
+      document.querySelectorAll(".track-row").forEach(row => {
+        const active = Number(row.dataset.index) === currentIndex;
+        row.classList.toggle("playing", active);
+        const num = row.querySelector(".track-num");
+        if (num && active) num.textContent = audio.paused ? "Ⅱ" : "♫";
+      });
+    }
+
+    function loadTrack(index, autoplay = true) {
+      if (index < 0 || index >= tracks.length) return;
+      currentIndex = index;
+      const track = tracks[index];
+      audio.src = track.audio;
+      audio.load();
+      $("nowArt").src = artUrl(track.art);
+      $("nowTitle").textContent = track.title;
+      $("nowArtist").textContent = track.artist;
+      $("currentTime").textContent = "0:00";
+      $("duration").textContent = "0:00";
+      $("progress").value = 0;
+      liked = false;
+      $("likeBtn").textContent = "♡";
+      renderList(filteredTracks());
+      if (autoplay) playAudio();
+      else updatePlayButtons();
+    }
+
+    async function playAudio() {
+      if (currentIndex === -1) loadTrack(0, false);
+      try {
+        await audio.play();
+      } catch (error) {
+        console.warn("Playback could not start:", error);
+        $("nowArtist").textContent = "Stream unavailable — try another track";
+      }
+      updatePlayButtons();
+    }
+    function togglePlay() {
+      if (currentIndex === -1) loadTrack(0, false);
+      if (audio.paused) playAudio();
+      else audio.pause();
+    }
+    function nextTrack() { loadTrack((currentIndex + 1 + tracks.length) % tracks.length); }
+    function prevTrack() {
+      if (audio.currentTime > 3) { audio.currentTime = 0; return; }
+      loadTrack((currentIndex - 1 + tracks.length) % tracks.length);
+    }
+    function filteredTracks() {
+      const query = $("search").value.trim().toLowerCase();
+      return tracks.filter(t => `${t.title} ${t.artist} ${t.album} ${t.mood}`.toLowerCase().includes(query));
+    }
+
+    $("cards").addEventListener("click", e => {
+      const card = e.target.closest(".card");
+      if (card) loadTrack(Number(card.dataset.index));
+    });
+    $("cards").addEventListener("keydown", e => {
+      if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("card")) {
+        e.preventDefault(); loadTrack(Number(e.target.dataset.index));
+      }
+    });
+    $("trackList").addEventListener("click", e => {
+      const row = e.target.closest(".track-row");
+      if (row) loadTrack(Number(row.dataset.index));
+    });
+    $("trackList").addEventListener("keydown", e => {
+      if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("track-row")) {
+        e.preventDefault(); loadTrack(Number(e.target.dataset.index));
+      }
+    });
+    $("search").addEventListener("input", () => {
+      const list = filteredTracks();
+      renderList(list);
+      renderCards(list);
+    });
+    $("playBtn").addEventListener("click", togglePlay);
+    $("heroPlay").addEventListener("click", () => currentIndex === -1 ? loadTrack(0) : togglePlay());
+    $("shuffleBtn").addEventListener("click", () => {
+      let next = Math.floor(Math.random() * tracks.length);
+      if (tracks.length > 1 && next === currentIndex) next = (next + 1) % tracks.length;
+      loadTrack(next);
+    });
+    $("nextBtn").addEventListener("click", nextTrack);
+    $("prevBtn").addEventListener("click", prevTrack);
+    $("volume").addEventListener("input", e => audio.volume = Number(e.target.value));
+    $("progress").addEventListener("input", () => {
+      isSeeking = true;
+      if (Number.isFinite(audio.duration)) {
+        $("currentTime").textContent = formatTime(audio.duration * Number($("progress").value) / 100);
+      }
+    });
+    $("progress").addEventListener("change", () => {
+      if (Number.isFinite(audio.duration)) audio.currentTime = audio.duration * Number($("progress").value) / 100;
+      isSeeking = false;
+    });
+    $("likeBtn").addEventListener("click", () => {
+      liked = !liked;
+      $("likeBtn").textContent = liked ? "♥" : "♡";
+    });
+    audio.addEventListener("loadedmetadata", () => $("duration").textContent = formatTime(audio.duration));
+    audio.addEventListener("timeupdate", () => {
+      if (!isSeeking && Number.isFinite(audio.duration) && audio.duration > 0) {
+        $("progress").value = audio.currentTime / audio.duration * 100;
+      }
+      $("currentTime").textContent = formatTime(audio.currentTime);
+    });
+    audio.addEventListener("play", updatePlayButtons);
+    audio.addEventListener("pause", updatePlayButtons);
+    audio.addEventListener("ended", nextTrack);
+    audio.addEventListener("error", () => {
+      if (currentIndex >= 0) $("nowArtist").textContent = "Could not load this demo stream";
+      updatePlayButtons();
+    });
+
+    audio.volume = Number($("volume").value);
+    renderCards();
+    renderList();
+  </script>
+</body>
+</html>
